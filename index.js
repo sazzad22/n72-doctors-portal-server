@@ -28,7 +28,6 @@ function verifyJWT(req, res, next) {
   const token = authHeader.split(" ")[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
     if (err) {
-      
       return res.status(403).send({ message: "Forbidden Access" });
     }
     req.decoded = decoded;
@@ -39,15 +38,31 @@ function verifyJWT(req, res, next) {
 async function run() {
   try {
     await client.connect();
+
+    //todo data collections
     const serviceCollection = client.db("doctors_portal").collection("service");
     const bookingCollection = client
       .db("doctors_portal")
       .collection("bookings");
     const userCollection = client.db("doctors_portal").collection("users");
+    const doctorCollection = client.db("doctors_portal").collection("doctors");
+
+    //todo verify Admin
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await userCollection.findOne({
+        email: requester,
+      });
+      if (requesterAccount.role === "admin") {
+        next();
+      } else {
+        res.status(403).send({ message: "forbidden - not admin" });
+      }
+    };
 
     app.get("/service", async (req, res) => {
       const query = {};
-      const cursor = serviceCollection.find(query);
+      const cursor = serviceCollection.find(query).project({ name: 1 });
       const services = await cursor.toArray();
       res.send(services);
     });
@@ -55,37 +70,29 @@ async function run() {
     //todo user
 
     //loading user
-    app.get("/user",verifyJWT, async (req, res) => {
-      
+    app.get("/user", verifyJWT, async (req, res) => {
       const users = await userCollection.find().toArray();
       res.send(users);
     });
     //todo check if admin
-    app.get('/admin/:email', verifyJWT, async (req, res) => {
+    app.get("/admin/:email", verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const user = await userCollection.findOne({ email: email })
-      const isAdmin = user.role === 'admin';
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
       res.send({ admin: isAdmin });
-    })
+    });
 
     //todo making admin
-    app.put("/user/admin/:email",verifyJWT, async (req, res) => {
+    app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
-      const requester = req.decoded.email;
-      const requesterAccount = await userCollection.findOne({ email: requester });
-      if (requesterAccount.role === 'admin') {
-        const filter = { email: email };
+
+      const filter = { email: email };
       const updateDoc = {
-        $set:{role:'admin'}
-      }
+        $set: { role: "admin" },
+      };
       const result = await userCollection.updateOne(filter, updateDoc);
-      
+
       return res.send(result);
-      }
-      else {
-        res.status(403).send({message:'forbidden'})
-      }
-      
     });
 
     // adding users to db - upsert is used so that is same user comes in ,it won't add the same user to the db multiple time
@@ -153,7 +160,7 @@ async function run() {
       if (patient === decodedEmail) {
         const query = { patient: patient };
         const bookings = await bookingCollection.find(query).toArray();
-        
+
         return res.send(bookings);
       } else {
         return res.status(403).send({ message: "forbidden Access" });
@@ -172,6 +179,14 @@ async function run() {
       }
       const result = await bookingCollection.insertOne(booking);
       return res.send({ success: true, result });
+    });
+    //todo Doctors
+
+    //Todo Add doctor
+    app.post("/doctor", verifyJWT, verifyAdmin, async (req, res) => {
+      const doctor = req.body;
+      const result = await doctorCollection.insertOne(doctor);
+      res.send(result);
     });
   } finally {
   }

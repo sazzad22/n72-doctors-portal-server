@@ -1,14 +1,11 @@
 {
-  "name": "n72-doctors-portal-server",
+  "name": "doctors-portal-server",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "engines": {
-    "node": "14.x"
-  },
   "scripts": {
-    "start":"node index.js",
-    "start-dev":"nodemon index.js",
+    "start": "node index.js",
+    "start-dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,9 +13,12 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^16.0.1",
+    "dotenv": "^16.0.0",
     "express": "^4.18.1",
     "jsonwebtoken": "^8.5.1",
-    "mongodb": "^4.6.0"
+    "mongodb": "^4.5.0",
+    "nodemailer": "^6.7.5",
+    "nodemailer-sendgrid-transport": "^0.2.0",
+    "stripe": "^9.1.0"
   }
 }
